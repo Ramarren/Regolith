@@ -13,14 +13,13 @@ namespace Regolith.Converters
         public float baseAmount = 1;
         
         [KSPField(isPersistant = true)]
-        public float currentMultiplier = 1;
+        public float currentMultiplier = 0.02f;
         
         protected double lastUpdateTime;
 
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);
-
             if (vessel != null){
                 try
                 {
@@ -44,11 +43,23 @@ namespace Regolith.Converters
             node.AddValue("lastUpdateTime", lastUpdateTime);
         }
 
+        public override void OnStart(StartState state)
+        {
+            base.OnStart(state);
+            part.force_activate();
+        }
+
         public override void OnFixedUpdate()
         {
             base.OnFixedUpdate();
-            updateMultipliers();
-            updateECCapacity();
+            try
+            {
+                updateMultipliers();
+                updateECCapacity();
+            }
+            catch (Exception e) {
+                Debug.Log("[REGO] - Error in - REGO_PowerRegulator_OnFixedUpdate - " + e.ToString());
+            }
         }
 
         // UGLY: copied from BaseConverter, maybe can be pulled into Utilities
@@ -74,7 +85,7 @@ namespace Regolith.Converters
             }
             catch (Exception e)
             {
-                print("[REGO] - Error in - BaseConverter_GetDeltaTime - " + e.Message);
+                print("[REGO] - Error in - PowerRegulator_GetDeltaTime - " + e.Message);
                 return 0;
             }
         }
@@ -90,35 +101,41 @@ namespace Regolith.Converters
 
         private void updateECCapacity()
         {
-            double maxAmount = baseAmount * currentMultiplier;
-            bool ecNodePresent = false;
-            foreach (PartResource r in part.Resources)
+            try
             {
-                if (r.resourceName.Equals("ElectricCharge"))
+                double maxAmount = baseAmount * currentMultiplier;
+                bool ecNodePresent = false;
+                foreach (PartResource r in part.Resources)
                 {
-                    ecNodePresent = true;
-                    if (Math.Abs(r.maxAmount - maxAmount) > Regolith.Common.Utilities.FLOAT_TOLERANCE)
+                    if (r.resourceName.Equals("ElectricCharge"))
                     {
-                        Debug.Log("PowerRegulator: Updated EC capacity "+r.maxAmount+" to "+maxAmount+"("+baseAmount+"*"+currentMultiplier+")");
-                        r.maxAmount = maxAmount;
-                        if (r.amount > maxAmount)
+                        ecNodePresent = true;
+                        if (Math.Abs(r.maxAmount - maxAmount) > Regolith.Common.Utilities.FLOAT_TOLERANCE)
                         {
-                            r.amount = maxAmount;
+                            //Debug.Log("PowerRegulator: Updated EC capacity " + r.maxAmount + " to " + maxAmount + "(" + baseAmount + "*" + currentMultiplier + ")");
+                            r.maxAmount = maxAmount;
+                            if (r.amount > maxAmount)
+                            {
+                                r.amount = maxAmount;
+                            }
                         }
+                        break;
                     }
-                    break;
+                }
+                if (!ecNodePresent)
+                {
+                    ConfigNode newResourceNode = new ConfigNode("RESOURCE");
+                    newResourceNode.AddValue("name", "ElectricCharge");
+                    newResourceNode.AddValue("maxAmount", maxAmount);
+                    newResourceNode.AddValue("amount", 0.0d);
+                    part.AddResource(newResourceNode);
+                    part.Resources.UpdateList();
                 }
             }
-            if (!ecNodePresent)
+            catch (Exception e)
             {
-                ConfigNode newResourceNode = new ConfigNode("RESOURCE");
-                newResourceNode.AddValue("name", "ElectricCharge");
-                newResourceNode.AddValue("maxAmount", maxAmount);
-                newResourceNode.AddValue("amount", 0.0d);
-                part.AddResource(newResourceNode);
-                part.Resources.UpdateList();
+                Debug.Log("[REGO] - Error in - PowerRegulator_updateECCapacity - " + e.ToString());
             }
         }
-
     }
 }

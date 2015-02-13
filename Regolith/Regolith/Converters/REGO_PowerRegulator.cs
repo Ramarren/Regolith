@@ -106,6 +106,7 @@ namespace Regolith.Converters
                             r.amount = maxAmount;
                         }
                     }
+                    break;
                 }
             }
             if (!ecNodePresent)

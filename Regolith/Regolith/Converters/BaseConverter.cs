@@ -160,7 +160,7 @@ namespace Regolith.Converters
             Actions["StartResourceConverterAction"].guiName = StartActionName;
             Actions["StopResourceConverterAction"].guiName = StopActionName;
             Fields["status"].guiName = ConverterName;
-            Fields["load"].guiName = ConverterName + " Load";
+            //Fields["load"].guiName = ConverterName + " Load";
             //Check for presence of an Animation Group.  If not present, enable the module.
 
             if (!part.Modules.Contains("REGO_ModuleAnimationGroup"))
